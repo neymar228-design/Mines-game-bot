@@ -5,47 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мины</title>
     <style>
-        body { background: #0d1117; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(5, 60px); gap: 8px; justify-content: center; margin: 20px auto; }
-        .cell { width: 60px; height: 60px; background: #1f2937; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
-        .cell.revealed { background: #2d3a4a; }
-        .cell.mine { background: #f85149; }
-        .cell.safe { background: #3fb950; }
-        input { padding: 10px; width: 100px; border-radius: 8px; border: none; text-align: center; }
-        button { background: #238636; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-size: 18px; cursor: pointer; margin: 6px; }
-        button.danger { background: #da3633; }
-        #status { margin-top: 16px; font-size: 20px; }
-        #multiplier { font-size: 28px; font-weight: bold; color: #f0883e; }
+        body {
+            background: #0d1117;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            gap: 8px;
+            justify-content: center;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            background: #1f2937;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cell.opened {
+            background: #2d3a4a;
+        }
+        .cell.mine {
+            background: #f85149;
+        }
+        .cell.safe {
+            background: #3fb950;
+        }
+        input, button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button {
+            background: #238636;
+            color: white;
+            cursor: pointer;
+        }
+        button.danger {
+            background: #da3633;
+        }
+        #multiplier {
+            font-size: 28px;
+            color: #f0883e;
+        }
+        #status {
+            margin-top: 16px;
+            font-size: 20px;
+        }
     </style>
 </head>
 <body>
+
     <h1>⛏️ Мины</h1>
+
     <div>
         <input type="number" id="betInput" value="1.0" step="0.5" min="0.5">
         <button onclick="startGame()">Начать игру</button>
     </div>
+
     <div id="multiplier">x1.00</div>
+
     <button onclick="cashOut()" class="danger">💰 Забрать ставку</button>
+
+    <!-- ПОЛЕ 5×5 -->
     <div class="grid" id="grid"></div>
+
     <div id="status">Ставка 1 GIFT</div>
 
     <script>
         const SIZE = 5;
         const MINES = 2;
-        let grid = [], revealed = [], gameOver = false, bet = 1.0, multiplier = 1.0, safeClicks = 0, gameActive = false;
+
+        let grid = [];
+        let opened = [];
+        let gameOver = false;
+        let gameActive = false;
+        let bet = 1.0;
+        let multiplier = 1.0;
+        let safeClicks = 0;
 
         function initGrid() {
+            // Создаём поле
             grid = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
-            revealed = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
+            opened = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
+
+            // Ставим мины
             let placed = 0;
             while (placed < MINES) {
                 let x = Math.floor(Math.random() * SIZE);
                 let y = Math.floor(Math.random() * SIZE);
-                if (grid[x][y] === 0) { grid[x][y] = 1; placed++; }
+                if (grid[x][y] === 0) {
+                    grid[x][y] = 1;
+                    placed++;
+                }
             }
-            gameOver = false; safeClicks = 0; multiplier = 1.0; gameActive = true;
-            document.getElementById('status').innerText = 'Кликай на клетки!';
+
+            gameOver = false;
+            gameActive = true;
+            safeClicks = 0;
+            multiplier = 1.0;
             document.getElementById('multiplier').innerText = 'x1.00';
+            document.getElementById('status').innerText = 'Кликай на клетки!';
             renderGrid();
         }
 
@@ -56,11 +127,15 @@
                 for (let j = 0; j < SIZE; j++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    if (revealed[i][j]) {
-                        cell.classList.add('revealed');
-                        cell.innerText = grid[i][j] === 1 ? '💣' : '✅';
-                        if (grid[i][j] === 1) cell.classList.add('mine');
-                        else cell.classList.add('safe');
+                    if (opened[i][j]) {
+                        cell.classList.add('opened');
+                        if (grid[i][j] === 1) {
+                            cell.classList.add('mine');
+                            cell.innerText = '💣';
+                        } else {
+                            cell.classList.add('safe');
+                            cell.innerText = '✅';
+                        }
                     }
                     cell.addEventListener('click', () => revealCell(i, j));
                     gridEl.appendChild(cell);
@@ -69,21 +144,28 @@
         }
 
         function revealCell(x, y) {
-            if (gameOver  !gameActive  revealed[x][y]) return;
-            revealed[x][y] = true;
+            if (gameOver  !gameActive  opened[x][y]) return;
+
+            opened[x][y] = true;
+
             if (grid[x][y] === 1) {
-                gameOver = true; gameActive = false;
+                gameOver = true;
+                gameActive = false;
                 document.getElementById('status').innerText = '💥 Мина! Ты проиграл.';
                 renderGrid();
                 sendResult(0);
                 return;
             }
+
             safeClicks++;
             multiplier = 1.0 + safeClicks * 0.1;
             document.getElementById('multiplier').innerText = x${multiplier.toFixed(2)};
             renderGrid();
+
+            // Проверяем, открыты ли все безопасные клетки
             if (safeClicks === SIZE * SIZE - MINES) {
-                gameOver = true; gameActive = false;
+                gameOver = true;
+                gameActive = false;
                 const win = bet * multiplier;
                 document.getElementById('status').innerText = 🎉 Все клетки открыты! +${win.toFixed(2)} GIFT;
                 sendResult(win);
@@ -91,9 +173,13 @@
         }
 
         function cashOut() {
-            if (!gameActive || gameOver) { document.getElementById('status').innerText = '❌ Игра не активна'; return; }
+            if (!gameActive || gameOver) {
+                document.getElementById('status').innerText = '❌ Игра не активна';
+                return;
+            }
             const win = bet * multiplier;
-            gameOver = true; gameActive = false;
+            gameOver = true;
+            gameActive = false;
             document.getElementById('status').innerText = ✅ Забрано: ${win.toFixed(2)} GIFT (x${multiplier.toFixed(2)});
             sendResult(win);
         }
@@ -113,8 +199,12 @@
             initGrid();
         }
 
-        if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.ready();
-        initGrid();
+        // Запускаем игру сразу
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+        }
+        startGame();
     </script>
+
 </body>
 </html>
